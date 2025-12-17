@@ -254,7 +254,7 @@ title.BackgroundTransparency = 1
 title.Size = UDim2.new(1, -40, 1, 0)
 title.Position = UDim2.new(0, 12, 0, 0)
 title.Font = Enum.Font.GothamBold
-title.Text = "Steal a Brainrot"
+title.Text = "SAB Premium Script"
 title.TextSize = 15
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextXAlignment = Enum.TextXAlignment.Left
@@ -264,9 +264,9 @@ subtitle.BackgroundTransparency = 1
 subtitle.Size = UDim2.new(1, -40, 1, 0)
 subtitle.Position = UDim2.new(0, 12, 0, 18)
 subtitle.Font = Enum.Font.Gotham
-subtitle.Text = "aikiscript"
-subtitle.TextSize = 11
-subtitle.TextColor3 = Color3.fromRGB(180, 190, 240)
+subtitle.Text = "Made by aikiscript"
+subtitle.TextSize = 15
+subtitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
 subtitle.Parent = header
 local closeBtn = Instance.new("TextButton")
@@ -351,16 +351,17 @@ c.CornerRadius = UDim.new(0, 10)
 c.Parent = btn
 return btn
 end
-local instantBtn = makeButton("INSTANT STEAL", Color3.fromRGB(90, 155, 255))
-local forwardBtn = makeButton("TP FORWARD", Color3.fromRGB(135, 215, 170), Color3.fromRGB(20, 25, 25))
-local noclipBtn = makeButton("NOCLIP: OFF", Color3.fromRGB(110, 95, 170), Color3.fromRGB(235, 235, 245))
-local fastBtn = makeButton("FAST STEAL: OFF", Color3.fromRGB(140, 130, 150), Color3.fromRGB(240, 240, 245))
+local instantBtn = makeButton("INSTANT STEAL", Color3.fromRGB(255, 255, 255),
+Color3.fromRGB(0, 0, 0))
+local forwardBtn = makeButton("TP FORWARD", Color3.fromRGB(255, 255, 255), Color3.fromRGB(0, 0, 0))
+local noclipBtn = makeButton("NOCLIP: OFF", Color3.fromRGB(255, 255, 255), Color3.fromRGB(0, 0, 0))
+local fastBtn = makeButton("FAST STEAL: OFF", Color3.fromRGB(255, 255, 255), Color3.fromRGB(0, 0, 0))
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Name = "ToggleButton"
 toggleBtn.Size = UDim2.new(0, 34, 0, 34)
 toggleBtn.Position = UDim2.new(0.02, 0, 0.5, -17)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(35, 36, 50)
-toggleBtn.Text = "≡"
+toggleBtn.Text = "💀"
 toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.TextSize = 16
 toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -370,7 +371,7 @@ toggleCorner.CornerRadius = UDim.new(1, 0)
 toggleCorner.Parent = toggleBtn
 toggleBtn.MouseButton1Click:Connect(function()
 mainFrame.Visible = not mainFrame.Visible
-toggleBtn.Text = mainFrame.Visible and "≡" or "▶"
+toggleBtn.Text = mainFrame.Visible and "☠️" or "💀"
 end)
 local uiScale = Instance.new("UIScale")
 uiScale.Scale = 1
@@ -389,22 +390,22 @@ forwardBtn.MouseButton1Click:Connect(doForwardTP)
 noclipBtn.MouseButton1Click:Connect(function()
 setNoclip(not noclipEnabled)
 if noclipEnabled then
-noclipBtn.BackgroundColor3 = Color3.fromRGB(210, 135, 255)
+noclipBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 noclipBtn.Text = "NOCLIP: ON"
 else
-noclipBtn.BackgroundColor3 = Color3.fromRGB(110, 95, 170)
+noclipBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 noclipBtn.Text = "NOCLIP: OFF"
 end
 end)
 fastBtn.MouseButton1Click:Connect(function()
 setFastSteal(not fastStealOn)
 if fastStealOn then
-fastBtn.BackgroundColor3 = Color3.fromRGB(245, 175, 100)
-fastBtn.TextColor3 = Color3.fromRGB(35, 25, 15)
+fastBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+fastBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 fastBtn.Text = "FAST STEAL: ON"
 else
-fastBtn.BackgroundColor3 = Color3.fromRGB(140, 130, 150)
-fastBtn.TextColor3 = Color3.fromRGB(240, 240, 245)
+fastBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+fastBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 fastBtn.Text = "FAST STEAL: OFF"
 end
 end)
