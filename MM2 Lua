@@ -40,7 +40,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 -- WINDOW
 ---------------------------------------------------
 local Window = Rayfield:CreateWindow({
-    Name = "❄️ Winter AutoFarm | Scrip ni ivnzd",
+    Name = "❄️ Winter AutoFarm | made by aiki",
     LoadingTitle = "Winter AutoFarm",
     LoadingSubtitle = "made by aiki",
     ConfigurationSaving = { Enabled = false },
