@@ -1,0 +1,101 @@
+-- Services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local TweenService = game:GetService("TweenService")
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MiniLoader"
+screenGui.Parent = PlayerGui
+
+-- Create semi-transparent Frame (overlay panel)
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 450, 0, 120) -- wider to fit longer text
+frame.Position = UDim2.new(0.5, -225, 0.3, 0) -- center
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+frame.BackgroundTransparency = 0.3
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+-- Rounded corners
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 25)
+UICorner.Parent = frame
+
+-- YouTube Label
+local ytLabel = Instance.new("TextLabel")
+ytLabel.Size = UDim2.new(1, -20, 0, 40)
+ytLabel.Position = UDim2.new(0, 10, 0, 10)
+ytLabel.BackgroundTransparency = 1
+ytLabel.Text = "YouTube: aikiscript"
+ytLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ytLabel.Font = Enum.Font.SourceSansBold
+ytLabel.TextScaled = true
+ytLabel.TextWrapped = true -- wrap text if too long
+ytLabel.RichText = true
+ytLabel.ClipsDescendants = true
+ytLabel.Parent = frame
+
+-- Progress Bar Background
+local barBg = Instance.new("Frame")
+barBg.Size = UDim2.new(0.9, 0, 0, 20)
+barBg.Position = UDim2.new(0.05, 0, 0.5, -10)
+barBg.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+barBg.BorderSizePixel = 0
+barBg.Parent = frame
+local barCorner = Instance.new("UICorner")
+barCorner.CornerRadius = UDim.new(0, 10)
+barCorner.Parent = barBg
+
+-- Progress Bar Fill
+local barFill = Instance.new("Frame")
+barFill.Size = UDim2.new(0, 0, 1, 0)
+barFill.Position = UDim2.new(0, 0, 0, 0)
+barFill.BackgroundColor3 = Color3.fromRGB(170, 0, 255)
+barFill.BorderSizePixel = 0
+barFill.Parent = barBg
+local fillCorner = Instance.new("UICorner")
+fillCorner.CornerRadius = UDim.new(0, 10)
+fillCorner.Parent = barFill
+
+-- Bottom Label
+local bottomLabel = Instance.new("TextLabel")
+bottomLabel.Size = UDim2.new(1, -20, 0, 30)
+bottomLabel.Position = UDim2.new(0, 10, 0.8, 0)
+bottomLabel.BackgroundTransparency = 1
+bottomLabel.Text = "Subscribe To aikiscript"
+bottomLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
+bottomLabel.Font = Enum.Font.SourceSansBold
+bottomLabel.TextScaled = true
+bottomLabel.TextWrapped = true -- wrap long text
+bottomLabel.RichText = true
+bottomLabel.ClipsDescendants = true
+bottomLabel.Parent = frame
+
+-- Countdown & progress fill
+local countdown = 30
+task.spawn(function()
+    while countdown > 0 do
+        task.wait(0.1)
+        countdown -= 0.1
+        local progress = (30 - countdown)/30
+        barFill:TweenSize(UDim2.new(progress, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
+    end
+    
+    -- Load the script when countdown ends
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Craz-bit/Loader-and-Lua/refs/heads/main/MM2%20Lua"))()
+    
+    -- Fade out, shrink, and slide down
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local targetPos = frame.Position + UDim2.new(0, 0, 0, 50)
+    local tween = TweenService:Create(frame, tweenInfo, {
+        Size = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Position = targetPos
+    })
+    tween:Play()
+    tween.Completed:Connect(function()
+        screenGui:Destroy()
+    end)
+end)
