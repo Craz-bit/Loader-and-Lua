@@ -1,0 +1,151 @@
+-- SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+-- SETTINGS
+local AUTO_ON = false
+local HITBOX_SIZE = 120
+local HITBOX_TRANSPARENCY = 0.85
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "ZZZZHub"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Main Frame
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 180, 0, 160)
+frame.Position = UDim2.new(0.83, 0, 0.4, 0)
+frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+-- Rounded corners
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 14)
+
+-- Stroke
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 1.2
+stroke.Color = Color3.fromRGB(80, 80, 80)
+stroke.Transparency = 0.2
+
+-- Title Bar
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 34)
+title.BackgroundTransparency = 1
+title.Text = "ZZZZHub"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+
+-- Divider
+local divider = Instance.new("Frame", frame)
+divider.Size = UDim2.new(1, -20, 0, 1)
+divider.Position = UDim2.new(0, 10, 0, 36)
+divider.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+divider.BorderSizePixel = 0
+
+-- Auto Hit Button
+local autoBtn = Instance.new("TextButton", frame)
+autoBtn.Size = UDim2.new(1, -24, 0, 34)
+autoBtn.Position = UDim2.new(0, 12, 0, 50)
+autoBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoBtn.Font = Enum.Font.GothamBold
+autoBtn.TextScaled = true
+autoBtn.Text = "Auto Hit: OFF"
+autoBtn.AutoButtonColor = false
+
+local autoCorner = Instance.new("UICorner", autoBtn)
+autoCorner.CornerRadius = UDim.new(0, 10)
+
+-- Hitbox Button
+local hitboxBtn = Instance.new("TextButton", frame)
+hitboxBtn.Size = UDim2.new(1, -24, 0, 34)
+hitboxBtn.Position = UDim2.new(0, 12, 0, 95)
+hitboxBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+hitboxBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+hitboxBtn.Font = Enum.Font.GothamBold
+hitboxBtn.TextScaled = true
+hitboxBtn.Text = "Hitbox: 120"
+hitboxBtn.AutoButtonColor = false
+
+local hitCorner = Instance.new("UICorner", hitboxBtn)
+hitCorner.CornerRadius = UDim.new(0, 10)
+
+-- Button visuals
+local function styleButton(btn)
+	local stroke = Instance.new("UIStroke", btn)
+	stroke.Color = Color3.fromRGB(70, 70, 70)
+	stroke.Thickness = 1
+end
+
+styleButton(autoBtn)
+styleButton(hitboxBtn)
+
+-- BUTTON LOGIC (UNCHANGED)
+autoBtn.MouseButton1Click:Connect(function()
+	AUTO_ON = not AUTO_ON
+	autoBtn.Text = AUTO_ON and "Auto Hit: ON" or "Auto Hit: OFF"
+
+	if AUTO_ON then
+		autoBtn.BackgroundColor3 = Color3.fromRGB(40, 120, 60)
+	else
+		autoBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	end
+end)
+
+hitboxBtn.MouseButton1Click:Connect(function()
+	if HITBOX_SIZE == 120 then
+		HITBOX_SIZE = 150
+	else
+		HITBOX_SIZE = 120
+	end
+	hitboxBtn.Text = "Hitbox: " .. HITBOX_SIZE
+end)
+
+-- MAIN LOOP (UNCHANGED)
+RunService.Heartbeat:Connect(function()
+	for _, v in pairs(Players:GetPlayers()) do
+		if v ~= player and v.Character then
+			local hrp = v.Character:FindFirstChild("HumanoidRootPart")
+			local hum = v.Character:FindFirstChildOfClass("Humanoid")
+
+			if hrp and hum and hum.Health > 0 then
+				local oldCFrame = hrp.CFrame
+
+				hrp.Size = Vector3.new(HITBOX_SIZE, HITBOX_SIZE * 1.2, HITBOX_SIZE)
+				hrp.CFrame = oldCFrame
+				hrp.Transparency = HITBOX_TRANSPARENCY
+				hrp.Material = Enum.Material.Neon
+				hrp.CanCollide = false
+				hrp.CanTouch = true
+				hrp.CanQuery = true
+				hrp.Massless = true
+			end
+		end
+	end
+
+	if AUTO_ON then
+		local char = player.Character
+		local backpack = player:FindFirstChild("Backpack")
+
+		if char and backpack then
+			if not char:FindFirstChild("Bat") then
+				local bat = backpack:FindFirstChild("Bat")
+				if bat then
+					bat.Parent = char
+				end
+			end
+
+			local tool = char:FindFirstChildOfClass("Tool")
+			if tool then
+				tool:Activate()
+			end
+		end
+	end
+end)
