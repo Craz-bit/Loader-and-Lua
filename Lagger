@@ -1,0 +1,392 @@
+local TweenService = game:GetService("TweenService")
+
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LuminLagger"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 300, 0, 410)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -205)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, 0, 0, 50)
+title.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+title.BorderSizePixel = 0
+title.Font = Enum.Font.GothamBold
+title.Text = "Lumin Hub Lagger"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 20
+title.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 10)
+titleCorner.Parent = title
+
+local titleIcon = Instance.new("ImageLabel")
+titleIcon.Name = "TitleIcon"
+titleIcon.Size = UDim2.new(0, 35, 0, 35)
+titleIcon.Position = UDim2.new(0, 10, 0.5, -17.5)
+titleIcon.BackgroundTransparency = 1
+titleIcon.Image = "https://cdn.discordapp.com/emojis/1417816999945572362.png?size=300"
+titleIcon.Parent = mainFrame
+
+local msLabel = Instance.new("TextLabel")
+msLabel.Name = "MSLabel"
+msLabel.Size = UDim2.new(1, -20, 0, 40)
+msLabel.Position = UDim2.new(0, 10, 0, 70)
+msLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+msLabel.BorderSizePixel = 0
+msLabel.Font = Enum.Font.Gotham
+msLabel.Text = "Ping: 35 ms"
+msLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+msLabel.TextSize = 18
+msLabel.Parent = mainFrame
+
+local msCorner = Instance.new("UICorner")
+msCorner.CornerRadius = UDim.new(0, 8)
+msCorner.Parent = msLabel
+
+local antiDetectButton = Instance.new("TextButton")
+antiDetectButton.Name = "AntiDetectButton"
+antiDetectButton.Size = UDim2.new(1, -20, 0, 50)
+antiDetectButton.Position = UDim2.new(0, 10, 0, 130)
+antiDetectButton.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
+antiDetectButton.BorderSizePixel = 0
+antiDetectButton.Font = Enum.Font.GothamBold
+antiDetectButton.Text = "Anti Detect"
+antiDetectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+antiDetectButton.TextSize = 18
+antiDetectButton.Parent = mainFrame
+
+local antiDetectCorner = Instance.new("UICorner")
+antiDetectCorner.CornerRadius = UDim.new(0, 8)
+antiDetectCorner.Parent = antiDetectButton
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(1, -20, 0, 50)
+toggleButton.Position = UDim2.new(0, 10, 0, 195)
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+toggleButton.BorderSizePixel = 0
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Text = "Lag Server: OFF"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextSize = 18
+toggleButton.Parent = mainFrame
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleButton
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -20, 0, 30)
+statusLabel.Position = UDim2.new(0, 10, 0, 260)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.Text = "Status: Ready"
+statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusLabel.TextSize = 14
+statusLabel.Parent = mainFrame
+
+local resetButton = Instance.new("TextButton")
+resetButton.Name = "ResetButton"
+resetButton.Size = UDim2.new(1, -20, 0, 50)
+resetButton.Position = UDim2.new(0, 10, 0, 305)
+resetButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+resetButton.BorderSizePixel = 0
+resetButton.Font = Enum.Font.GothamBold
+resetButton.Text = "Reset Character"
+resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+resetButton.TextSize = 18
+resetButton.Parent = mainFrame
+
+local resetCorner = Instance.new("UICorner")
+resetCorner.CornerRadius = UDim.new(0, 8)
+resetCorner.Parent = resetButton
+
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 30, 0, 30)
+closeButton.Position = UDim2.new(1, -40, 0, 10)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+closeButton.BorderSizePixel = 0
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 18
+closeButton.Parent = mainFrame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeButton
+
+local lagEnabled = false
+local storedPositions = {}
+local lagConnections = {}
+
+spawn(function()
+    while wait(math.random(10, 30) / 10) do
+        local randomPing = math.random(25, 85)
+        msLabel.Text = "Ping: " .. randomPing .. " ms"
+        
+        if randomPing < 50 then
+            msLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        elseif randomPing < 80 then
+            msLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+        else
+            msLabel.TextColor3 = Color3.fromRGB(255, 100, 0)
+        end
+    end
+end)
+
+local function applyLagToPlayer(otherPlayer)
+    if otherPlayer == player then return end
+    
+    local otherChar = otherPlayer.Character
+    if not otherChar then return end
+    
+    local humanoidRootPart = otherChar:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+    
+    if not storedPositions[otherPlayer] then
+        storedPositions[otherPlayer] = {
+            position = humanoidRootPart.Position,
+            lastUpdate = tick()
+        }
+    end
+    
+    local connection
+    connection = game:GetService("RunService").Heartbeat:Connect(function()
+        if not lagEnabled then
+            connection:Disconnect()
+            return
+        end
+        
+        if not otherChar or not otherChar.Parent then
+            connection:Disconnect()
+            storedPositions[otherPlayer] = nil
+            return
+        end
+        
+        local hrp = otherChar:FindFirstChild("HumanoidRootPart")
+        if not hrp then
+            connection:Disconnect()
+            return
+        end
+        
+        local stored = storedPositions[otherPlayer]
+        local currentTime = tick()
+        
+        hrp.CFrame = CFrame.new(stored.position)
+    end)
+    
+    table.insert(lagConnections, connection)
+end
+
+local function startLagging()
+    lagEnabled = true
+    toggleButton.Text = "Lag Server: ON"
+    toggleButton.BackgroundColor3 = Color3.fromRGB(70, 255, 70)
+    statusLabel.Text = "Status: Lagging others..."
+    
+    for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character then
+            applyLagToPlayer(otherPlayer)
+        end
+    end
+    
+    game.Players.PlayerAdded:Connect(function(newPlayer)
+        if lagEnabled then
+            newPlayer.CharacterAdded:Connect(function()
+                wait(0.5)
+                applyLagToPlayer(newPlayer)
+            end)
+        end
+    end)
+end
+
+local function stopLagging()
+    lagEnabled = false
+    toggleButton.Text = "Lag Server: OFF"
+    toggleButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+    statusLabel.Text = "Status: Ready"
+    
+    for _, connection in pairs(lagConnections) do
+        connection:Disconnect()
+    end
+    lagConnections = {}
+    storedPositions = {}
+end
+
+local function showLoadingScreen()
+    local LoadingGui = Instance.new("ScreenGui")
+    LoadingGui.Parent = game.CoreGui
+    LoadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local LoadingFrame = Instance.new("Frame")
+    LoadingFrame.Parent = LoadingGui
+    LoadingFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    LoadingFrame.Size = UDim2.new(0, 320, 0, 140)
+    LoadingFrame.Position = UDim2.new(0.5, -160, 0.5, -70)
+    LoadingFrame.BorderSizePixel = 0
+    LoadingFrame.BackgroundTransparency = 0.2
+
+    local LoadingCorner = Instance.new("UICorner")
+    LoadingCorner.CornerRadius = UDim.new(0.15, 0)
+    LoadingCorner.Parent = LoadingFrame
+
+    local GUIStroke = Instance.new("UIStroke")
+    GUIStroke.Color = Color3.fromRGB(0, 255, 255)
+    GUIStroke.Thickness = 2
+    GUIStroke.Parent = LoadingFrame
+
+    local LoadingTitle = Instance.new("TextLabel")
+    LoadingTitle.Parent = LoadingFrame
+    LoadingTitle.Size = UDim2.new(1, 0, 0.2, 0)
+    LoadingTitle.Position = UDim2.new(0, 0, 0.05, 0)
+    LoadingTitle.Text = "Loading."
+    LoadingTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LoadingTitle.Font = Enum.Font.SourceSansBold
+    LoadingTitle.TextScaled = true
+    LoadingTitle.BackgroundTransparency = 1
+
+    local TitleStroke = Instance.new("UIStroke")
+    TitleStroke.Thickness = 2
+    TitleStroke.Color = Color3.fromRGB(0, 0, 0)
+    TitleStroke.Parent = LoadingTitle
+
+    local ProgressBarBackground = Instance.new("Frame")
+    ProgressBarBackground.Parent = LoadingFrame
+    ProgressBarBackground.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    ProgressBarBackground.Size = UDim2.new(0.9, 0, 0.15, 0)
+    ProgressBarBackground.Position = UDim2.new(0.05, 0, 0.3, 0)
+    ProgressBarBackground.BorderSizePixel = 0
+
+    local ProgressCorner = Instance.new("UICorner")
+    ProgressCorner.CornerRadius = UDim.new(0.4, 0)
+    ProgressCorner.Parent = ProgressBarBackground
+
+    local ProgressBar = Instance.new("Frame")
+    ProgressBar.Parent = ProgressBarBackground
+    ProgressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    ProgressBar.Size = UDim2.new(0, 0, 1, 0)
+    ProgressBar.BorderSizePixel = 0
+
+    local ProgressBarCorner = Instance.new("UICorner")
+    ProgressBarCorner.CornerRadius = UDim.new(0.4, 0)
+    ProgressBarCorner.Parent = ProgressBar
+
+    local ProgressBarStroke = Instance.new("UIStroke")
+    ProgressBarStroke.Color = Color3.fromRGB(0, 255, 255)
+    ProgressBarStroke.Thickness = 1.5
+    ProgressBarStroke.Parent = ProgressBar
+
+    local StatusText = Instance.new("TextLabel")
+    StatusText.Parent = LoadingFrame
+    StatusText.Size = UDim2.new(1, 0, 0.2, 0)
+    StatusText.Position = UDim2.new(0, 0, 0.75, 0)
+    StatusText.Text = "Initializing..."
+    StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    StatusText.Font = Enum.Font.SourceSansBold
+    StatusText.TextScaled = true
+    StatusText.BackgroundTransparency = 1
+
+    local StatusStroke = Instance.new("UIStroke")
+    StatusStroke.Thickness = 2
+    StatusStroke.Color = Color3.fromRGB(0, 0, 0)
+    StatusStroke.Parent = StatusText
+
+    spawn(function()
+        while LoadingGui.Parent do
+            for _, dots in pairs({".", "..", "..."}) do
+                LoadingTitle.Text = "Loading" .. dots
+                wait(0.5)
+            end
+        end
+    end)
+
+    local function updateProgress(percent, text, duration)
+        StatusText.Text = text
+        TweenService:Create(
+            ProgressBar,
+            TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = UDim2.new(percent / 100, 0, 1, 0) }
+        ):Play()
+        wait(duration)
+    end
+
+    updateProgress(20, "Initializing...", 1)
+    updateProgress(40, "Bypassing Detection...", 1.5)
+    updateProgress(60, "Securing Connection...", 1.5)
+    updateProgress(80, "Finalizing...", 1.5)
+    updateProgress(100, "Complete!", 1.5)
+
+    StatusText.Text = "Anti Detect Successful!"
+    StatusText.TextColor3 = Color3.fromRGB(0, 255, 0)
+
+    wait(1.5)
+    LoadingGui:Destroy()
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+    if lagEnabled then
+        stopLagging()
+    else
+        startLagging()
+    end
+end)
+
+antiDetectButton.MouseButton1Click:Connect(function()
+    antiDetectButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    antiDetectButton.Text = "Loading..."
+    statusLabel.Text = "Status: Running Anti Detect..."
+    
+    showLoadingScreen()
+    
+    wait(7)
+    
+    antiDetectButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    antiDetectButton.Text = "Anti Detect ✓"
+    statusLabel.Text = "Status: Protected"
+    
+    wait(2)
+    antiDetectButton.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
+    antiDetectButton.Text = "Anti Detect"
+    statusLabel.Text = "Status: Ready"
+end)
+
+resetButton.MouseButton1Click:Connect(function()
+    stopLagging()
+    statusLabel.Text = "Status: Resetting..."
+    resetButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    
+    wait(0.5)
+    
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid.Health = 0
+    end
+    
+    wait(1)
+    resetButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    statusLabel.Text = "Status: Ready"
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    stopLagging()
+    screenGui:Destroy()
+end)
