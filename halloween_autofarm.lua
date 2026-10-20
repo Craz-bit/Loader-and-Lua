@@ -1,0 +1,851 @@
+local Players            = game:GetService("Players")
+local TweenService       = game:GetService("TweenService")
+local UserInputService   = game:GetService("UserInputService")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local VirtualUser        = game:GetService("VirtualUser")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
+
+local cfg = {
+	autoFarm   = false,
+	antiAFK    = true,
+	farmSpeed  = 30,
+	loopDelay  = 0.18,
+}
+
+local stats = {
+	coins   = 0,
+	started = os.clock(),
+}
+
+-- 🎃 Halloween palette
+local C = {
+	bgTop    = Color3.fromRGB(52, 20, 78),
+	bgBot    = Color3.fromRGB(10, 5, 16),
+	card     = Color3.fromRGB(22, 12, 32),
+	glass    = Color3.fromRGB(40, 24, 58),
+	glassTop = Color3.fromRGB(64, 38, 90),
+	accent   = Color3.fromRGB(255, 118, 20),
+	accent2  = Color3.fromRGB(255, 176, 64),
+	toxic    = Color3.fromRGB(120, 255, 90),
+	blood    = Color3.fromRGB(190, 28, 48),
+	trackOff = Color3.fromRGB(62, 44, 84),
+	ink      = Color3.fromRGB(255, 240, 222),
+	inkSoft  = Color3.fromRGB(178, 152, 204),
+	fog      = Color3.fromRGB(170, 140, 210),
+}
+
+local function corner(inst, r)
+	local u = Instance.new("UICorner")
+	u.CornerRadius = UDim.new(0, r or 8)
+	u.Parent = inst
+	return u
+end
+
+local function pad(inst, p)
+	local u = Instance.new("UIPadding")
+	u.PaddingLeft   = UDim.new(0, p)
+	u.PaddingRight  = UDim.new(0, p)
+	u.PaddingTop    = UDim.new(0, p)
+	u.PaddingBottom = UDim.new(0, p)
+	u.Parent = inst
+	return u
+end
+
+local function gradient(inst, c1, c2, rot)
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new(c1, c2)
+	g.Rotation = rot or 90
+	g.Parent = inst
+	return g
+end
+
+local function stroke(inst, col, thick, trans)
+	local s = Instance.new("UIStroke")
+	s.Color = col
+	s.Thickness = thick or 1
+	s.Transparency = trans or 0
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent = inst
+	return s
+end
+
+local function addPop(btn, down)
+	local sc = Instance.new("UIScale")
+	sc.Parent = btn
+	local target = down or 0.9
+	local function to(v)
+		TweenService:Create(sc, TweenInfo.new(0.1, Enum.EasingStyle.Quad), { Scale = v }):Play()
+	end
+	btn.MouseButton1Down:Connect(function() to(target) end)
+	btn.MouseButton1Up:Connect(function() to(1) end)
+	btn.MouseLeave:Connect(function() to(1) end)
+end
+
+-- looping pulse tween helper
+local function pulse(inst, props, t)
+	TweenService:Create(
+		inst,
+		TweenInfo.new(t or 1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		props
+	):Play()
+end
+
+----------------------------------------------------------------
+-- GUI parent + cleanup of old copies
+----------------------------------------------------------------
+local guiParent = PlayerGui
+do
+	local ok, hui = pcall(function() return gethui and gethui() end)
+	if ok and hui then
+		guiParent = hui
+	else
+		local ok2, cg = pcall(function() return game:GetService("CoreGui") end)
+		if ok2 and cg then guiParent = cg end
+	end
+end
+
+for _, where in ipairs({ guiParent, PlayerGui }) do
+	pcall(function()
+		for _, name in ipairs({ "HalloweenAutofarm", "SummerAutofarm", "Heatwave", "XHub" }) do
+			local old = where:FindFirstChild(name)
+			while old do
+				old:Destroy()
+				old = where:FindFirstChild(name)
+			end
+		end
+	end)
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "HalloweenAutofarm"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 999999
+if not pcall(function() gui.Parent = guiParent end) then
+	gui.Parent = PlayerGui
+end
+
+----------------------------------------------------------------
+-- Window
+----------------------------------------------------------------
+local WIN_W, WIN_H = 292, 350
+
+local win = Instance.new("Frame")
+win.Name = "Window"
+win.AnchorPoint = Vector2.new(0, 0)
+win.Position = UDim2.new(0.5, -WIN_W / 2, 0.5, -WIN_H / 2)
+win.Size = UDim2.new(0, WIN_W, 0, WIN_H)
+win.BackgroundColor3 = C.card
+win.BorderSizePixel = 0
+win.ZIndex = 2
+win.Active = true
+win.ClipsDescendants = true
+win.Parent = gui
+corner(win, 16)
+
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.BackgroundTransparency = 1
+shadow.Image = "rbxassetid://6014261993"
+shadow.ImageColor3 = Color3.fromRGB(255, 100, 10) -- orange glow
+shadow.ImageTransparency = 0.55
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(49, 49, 450, 450)
+shadow.ZIndex = 1
+shadow.Parent = gui
+local function syncShadow()
+	local p, s = win.Position, win.Size
+	shadow.Position = UDim2.new(p.X.Scale, p.X.Offset - 22, p.Y.Scale, p.Y.Offset - 18)
+	shadow.Size = UDim2.new(s.X.Scale, s.X.Offset + 44, s.Y.Scale, s.Y.Offset + 46)
+end
+win:GetPropertyChangedSignal("Position"):Connect(syncShadow)
+win:GetPropertyChangedSignal("Size"):Connect(syncShadow)
+syncShadow()
+pulse(shadow, { ImageTransparency = 0.8 }, 1.8) -- flickering candle glow
+
+gradient(win, C.bgTop, C.bgBot, 90)
+local winStroke = stroke(win, C.accent, 1.5, 0.35)
+pulse(winStroke, { Transparency = 0.75 }, 1.3)
+
+-- ground fog (created first so it sits behind everything)
+local fog = Instance.new("Frame")
+fog.Name = "Fog"
+fog.AnchorPoint = Vector2.new(0, 1)
+fog.Position = UDim2.new(0, 0, 1, 0)
+fog.Size = UDim2.new(1, 0, 0, 70)
+fog.BackgroundColor3 = C.fog
+fog.BorderSizePixel = 0
+fog.Active = false
+fog.Parent = win
+do
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(1, 0.78),
+	})
+	g.Parent = fog
+end
+
+----------------------------------------------------------------
+-- Header
+----------------------------------------------------------------
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 52)
+header.BackgroundTransparency = 1
+header.BorderSizePixel = 0
+header.Parent = win
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(1, -24, 0, 1)
+divider.Position = UDim2.new(0, 12, 1, -1)
+divider.BackgroundColor3 = C.accent
+divider.BackgroundTransparency = 0.7
+divider.BorderSizePixel = 0
+divider.Parent = header
+
+-- 🦇 bats flying across the header
+local function spawnBat()
+	local bat = Instance.new("TextLabel")
+	bat.Size = UDim2.new(0, 18, 0, 18)
+	bat.BackgroundTransparency = 1
+	bat.Text = "🦇"
+	bat.TextSize = 14 + math.random(0, 6)
+	bat.TextTransparency = 0.35
+	bat.ZIndex = 1
+	bat.Active = false
+	bat.Parent = header
+
+	local y = math.random(2, 30)
+	local fromLeft = math.random() > 0.5
+	local w = math.max(header.AbsoluteSize.X, WIN_W)
+	local startX = fromLeft and -24 or (w + 6)
+	local endX   = fromLeft and (w + 6) or -24
+	bat.Position = UDim2.new(0, startX, 0, y)
+
+	local dur = 3.5 + math.random() * 3
+	local fly = TweenService:Create(bat, TweenInfo.new(dur, Enum.EasingStyle.Linear), {
+		Position = UDim2.new(0, endX, 0, y + math.random(-8, 10)),
+	})
+	fly:Play()
+	task.delay(dur + 0.1, function() bat:Destroy() end)
+end
+
+task.spawn(function()
+	while gui.Parent do
+		spawnBat()
+		task.wait(2.5 + math.random() * 3)
+	end
+end)
+
+local badge = Instance.new("Frame")
+badge.Size = UDim2.new(0, 30, 0, 30)
+badge.AnchorPoint = Vector2.new(0, 0.5)
+badge.Position = UDim2.new(0, 12, 0.5, 0)
+badge.BackgroundColor3 = C.accent
+badge.BorderSizePixel = 0
+badge.ZIndex = 2
+badge.Parent = header
+corner(badge, 9)
+gradient(badge, C.accent2, C.accent, 115)
+local badgeStroke = stroke(badge, C.accent2, 1.2, 0.4)
+pulse(badgeStroke, { Transparency = 0.9, Color = C.toxic }, 1.6)
+
+local pumpkin = Instance.new("TextLabel")
+pumpkin.Size = UDim2.new(1, 0, 1, 0)
+pumpkin.BackgroundTransparency = 1
+pumpkin.Text = "🎃"
+pumpkin.TextColor3 = Color3.fromRGB(255, 255, 255)
+pumpkin.TextSize = 19
+pumpkin.Font = Enum.Font.GothamBold
+pumpkin.ZIndex = 2
+pumpkin.Parent = badge
+
+local titleWrap = Instance.new("Frame")
+titleWrap.Size = UDim2.new(1, -120, 1, 0)
+titleWrap.Position = UDim2.new(0, 50, 0, 0)
+titleWrap.BackgroundTransparency = 1
+titleWrap.ZIndex = 2
+titleWrap.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 24)
+title.Position = UDim2.new(0, 0, 0, 6)
+title.BackgroundTransparency = 1
+title.Text = "Halloween Autofarm"
+title.TextColor3 = C.ink
+title.TextSize = 20
+title.Font = Enum.Font.Creepster
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 2
+title.Parent = titleWrap
+gradient(title, Color3.fromRGB(255, 205, 110), Color3.fromRGB(255, 110, 20), 90)
+
+local statusDot = Instance.new("Frame")
+statusDot.Size = UDim2.new(0, 7, 0, 7)
+statusDot.AnchorPoint = Vector2.new(0, 0.5)
+statusDot.Position = UDim2.new(0, 1, 0, 37)
+statusDot.BackgroundColor3 = C.blood
+statusDot.BorderSizePixel = 0
+statusDot.ZIndex = 2
+statusDot.Parent = titleWrap
+corner(statusDot, 4)
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, -14, 0, 14)
+subtitle.Position = UDim2.new(0, 14, 0, 30)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "sleeping in the crypt"
+subtitle.TextColor3 = C.inkSoft
+subtitle.TextSize = 11
+subtitle.Font = Enum.Font.GothamMedium
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.ZIndex = 2
+subtitle.Parent = titleWrap
+
+-- 🕷️ spider dangling on a thread
+local thread = Instance.new("Frame")
+thread.Name = "SpiderThread"
+thread.Position = UDim2.new(1, -62, 0, 0)
+thread.Size = UDim2.new(0, 1, 0, 16)
+thread.BackgroundColor3 = C.inkSoft
+thread.BackgroundTransparency = 0.35
+thread.BorderSizePixel = 0
+thread.ZIndex = 2
+thread.Parent = header
+
+local spider = Instance.new("TextLabel")
+spider.AnchorPoint = Vector2.new(0.5, 0)
+spider.Position = UDim2.new(0.5, 0, 1, -2)
+spider.Size = UDim2.new(0, 18, 0, 18)
+spider.BackgroundTransparency = 1
+spider.Text = "🕷️"
+spider.TextSize = 14
+spider.ZIndex = 2
+spider.Parent = thread
+pulse(thread, { Size = UDim2.new(0, 1, 0, 26) }, 1.8)
+
+local minBtn = Instance.new("TextButton")
+minBtn.Name = "Min"
+minBtn.AnchorPoint = Vector2.new(1, 0.5)
+minBtn.Position = UDim2.new(1, -14, 0.5, 0)
+minBtn.Size = UDim2.new(0, 28, 0, 28)
+minBtn.BackgroundColor3 = C.glass
+minBtn.BackgroundTransparency = 0.2
+minBtn.Text = "–"
+minBtn.TextColor3 = C.ink
+minBtn.TextSize = 22
+minBtn.Font = Enum.Font.GothamBold
+minBtn.AutoButtonColor = false
+minBtn.ZIndex = 4
+minBtn.Parent = header
+corner(minBtn, 8)
+stroke(minBtn, C.accent, 1, 0.65)
+addPop(minBtn)
+
+----------------------------------------------------------------
+-- Body
+----------------------------------------------------------------
+local body = Instance.new("ScrollingFrame")
+body.Name = "Body"
+body.Active = true
+body.Position = UDim2.new(0, 0, 0, 52)
+body.Size = UDim2.new(1, 0, 1, -52)
+body.BackgroundTransparency = 1
+body.BorderSizePixel = 0
+body.ScrollBarThickness = 3
+body.ScrollBarImageColor3 = C.accent
+body.ScrollBarImageTransparency = 0.45
+body.CanvasSize = UDim2.new(0, 0, 0, 0)
+body.Parent = win
+pad(body, 12)
+
+local list = Instance.new("UIListLayout")
+list.Padding = UDim.new(0, 10)
+list.SortOrder = Enum.SortOrder.LayoutOrder
+list.Parent = body
+
+list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	body.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 24)
+end)
+
+local order = 0
+local function nextOrder()
+	order = order + 1
+	return order
+end
+
+local function sectionLabel(text)
+	local l = Instance.new("TextLabel")
+	l.Size = UDim2.new(1, 0, 0, 16)
+	l.BackgroundTransparency = 1
+	l.Text = string.upper(text)
+	l.TextColor3 = C.accent2
+	l.TextTransparency = 0.1
+	l.TextSize = 11
+	l.Font = Enum.Font.GothamBold
+	l.TextXAlignment = Enum.TextXAlignment.Left
+	l.LayoutOrder = nextOrder()
+	l.Parent = body
+	return l
+end
+
+local function card(height)
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, 0, 0, height)
+	f.BackgroundColor3 = C.glass
+	f.BackgroundTransparency = 0.1
+	f.BorderSizePixel = 0
+	f.LayoutOrder = nextOrder()
+	f.Parent = body
+	corner(f, 10)
+
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(C.glassTop, C.glass)
+	g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.0),
+		NumberSequenceKeypoint.new(1, 0.28),
+	})
+	g.Parent = f
+
+	stroke(f, C.accent, 1, 0.78)
+	return f
+end
+
+local function toggle(label, sub, initial, onChange)
+	local f = card(sub and 54 or 44)
+
+	local name = Instance.new("TextLabel")
+	name.Position = UDim2.new(0, 12, 0, sub and 8 or 0)
+	name.Size = UDim2.new(1, -80, 0, sub and 20 or 44)
+	name.BackgroundTransparency = 1
+	name.Text = label
+	name.TextColor3 = C.ink
+	name.TextSize = 14
+	name.Font = Enum.Font.GothamSemibold
+	name.TextXAlignment = Enum.TextXAlignment.Left
+	name.TextYAlignment = sub and Enum.TextYAlignment.Bottom or Enum.TextYAlignment.Center
+	name.Parent = f
+
+	if sub then
+		local d = Instance.new("TextLabel")
+		d.Position = UDim2.new(0, 12, 0, 28)
+		d.Size = UDim2.new(1, -80, 0, 16)
+		d.BackgroundTransparency = 1
+		d.Text = sub
+		d.TextColor3 = C.inkSoft
+		d.TextSize = 11
+		d.Font = Enum.Font.Gotham
+		d.TextXAlignment = Enum.TextXAlignment.Left
+		d.Parent = f
+	end
+
+	local track = Instance.new("TextButton")
+	track.AnchorPoint = Vector2.new(1, 0.5)
+	track.Position = UDim2.new(1, -12, 0.5, 0)
+	track.Size = UDim2.new(0, 50, 0, 26)
+	track.AutoButtonColor = false
+	track.Text = ""
+	track.BackgroundColor3 = initial and C.accent or C.trackOff
+	track.Parent = f
+	corner(track, 13)
+	addPop(track, 0.94)
+
+	local knob = Instance.new("TextLabel")
+	knob.Size = UDim2.new(0, 20, 0, 20)
+	knob.Position = initial and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10)
+	knob.BackgroundColor3 = C.ink
+	knob.BorderSizePixel = 0
+	knob.Text = initial and "🎃" or "💀"
+	knob.TextSize = 11
+	knob.Parent = track
+	corner(knob, 10)
+	stroke(knob, Color3.fromRGB(20, 10, 30), 1, 0.6)
+
+	local state = initial
+	local ti = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	track.MouseButton1Click:Connect(function()
+		state = not state
+		knob.Text = state and "🎃" or "💀"
+		TweenService:Create(track, ti, { BackgroundColor3 = state and C.accent or C.trackOff }):Play()
+		TweenService:Create(knob, ti, {
+			Position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10),
+		}):Play()
+		onChange(state)
+	end)
+
+	return f
+end
+
+local function slider(label, minV, maxV, initial, suffix, onChange)
+	local f = card(58)
+
+	local name = Instance.new("TextLabel")
+	name.Position = UDim2.new(0, 12, 0, 8)
+	name.Size = UDim2.new(1, -80, 0, 18)
+	name.BackgroundTransparency = 1
+	name.Text = label
+	name.TextColor3 = C.ink
+	name.TextSize = 14
+	name.Font = Enum.Font.GothamSemibold
+	name.TextXAlignment = Enum.TextXAlignment.Left
+	name.Parent = f
+
+	local val = Instance.new("TextLabel")
+	val.AnchorPoint = Vector2.new(1, 0)
+	val.Position = UDim2.new(1, -12, 0, 8)
+	val.Size = UDim2.new(0, 70, 0, 18)
+	val.BackgroundTransparency = 1
+	val.Text = tostring(initial) .. (suffix or "")
+	val.TextColor3 = C.accent
+	val.TextSize = 14
+	val.Font = Enum.Font.GothamBold
+	val.TextXAlignment = Enum.TextXAlignment.Right
+	val.Parent = f
+
+	local track = Instance.new("Frame")
+	track.Position = UDim2.new(0, 12, 0, 38)
+	track.Size = UDim2.new(1, -24, 0, 8)
+	track.BackgroundColor3 = C.trackOff
+	track.BorderSizePixel = 0
+	track.Parent = f
+	corner(track, 4)
+
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new((initial - minV) / (maxV - minV), 0, 1, 0)
+	fill.BackgroundColor3 = C.accent
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	corner(fill, 4)
+	gradient(fill, C.accent, C.blood, 0)
+
+	local knob = Instance.new("TextLabel")
+	knob.AnchorPoint = Vector2.new(0.5, 0.5)
+	knob.Position = UDim2.new((initial - minV) / (maxV - minV), 0, 0.5, 0)
+	knob.Size = UDim2.new(0, 20, 0, 20)
+	knob.BackgroundTransparency = 1
+	knob.Text = "🎃"
+	knob.TextSize = 17
+	knob.ZIndex = 2
+	knob.Parent = track
+
+	local hit = Instance.new("TextButton")
+	hit.BackgroundTransparency = 1
+	hit.Text = ""
+	hit.Position = UDim2.new(0, 0, 0, -12)
+	hit.Size = UDim2.new(1, 0, 0, 32)
+	hit.ZIndex = 3
+	hit.Parent = track
+
+	local dragging = false
+
+	local function setFromX(px)
+		local a = math.clamp((px - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+		local v = math.floor(minV + a * (maxV - minV) + 0.5)
+		fill.Size = UDim2.new(a, 0, 1, 0)
+		knob.Position = UDim2.new(a, 0, 0.5, 0)
+		val.Text = tostring(v) .. (suffix or "")
+		onChange(v)
+	end
+
+	hit.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			setFromX(input.Position.X)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			setFromX(input.Position.X)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	return f
+end
+
+local function statRow(label, initial)
+	local f = card(38)
+	local n = Instance.new("TextLabel")
+	n.Position = UDim2.new(0, 12, 0, 0)
+	n.Size = UDim2.new(0.6, 0, 1, 0)
+	n.BackgroundTransparency = 1
+	n.Text = label
+	n.TextColor3 = C.inkSoft
+	n.TextSize = 13
+	n.Font = Enum.Font.GothamMedium
+	n.TextXAlignment = Enum.TextXAlignment.Left
+	n.Parent = f
+
+	local v = Instance.new("TextLabel")
+	v.AnchorPoint = Vector2.new(1, 0)
+	v.Position = UDim2.new(1, -12, 0, 0)
+	v.Size = UDim2.new(0.4, 0, 1, 0)
+	v.BackgroundTransparency = 1
+	v.Text = tostring(initial)
+	v.TextColor3 = C.accent
+	v.TextSize = 15
+	v.Font = Enum.Font.GothamBold
+	v.TextXAlignment = Enum.TextXAlignment.Right
+	v.Parent = f
+	return v
+end
+
+sectionLabel("🎃  Harvest")
+toggle("Auto Farm", "harvest every coin on the map", cfg.autoFarm, function(s)
+	cfg.autoFarm = s
+	subtitle.Text = s and "haunting the coins..." or "sleeping in the crypt"
+	TweenService:Create(statusDot, TweenInfo.new(0.2), {
+		BackgroundColor3 = s and C.toxic or C.blood,
+	}):Play()
+end)
+slider("Farm Speed", 5, 120, cfg.farmSpeed, "", function(v)
+	cfg.farmSpeed = v
+end)
+
+sectionLabel("🕯️  Utility")
+toggle("Anti AFK", "no ghosting out of the server", cfg.antiAFK, function(s)
+	cfg.antiAFK = s
+end)
+
+sectionLabel("💀  Session")
+local coinStat = statRow("Coins collected", 0)
+local timeStat = statRow("Time active", "0m 0s")
+
+local footer = Instance.new("TextLabel")
+footer.Size = UDim2.new(1, 0, 0, 20)
+footer.BackgroundTransparency = 1
+footer.Text = "🦇  happy halloween  👻"
+footer.TextColor3 = C.inkSoft
+footer.TextTransparency = 0.3
+footer.TextSize = 11
+footer.Font = Enum.Font.GothamMedium
+footer.LayoutOrder = nextOrder()
+footer.Parent = body
+
+-- 🕸️ cobweb in the corner
+local web = Instance.new("TextLabel")
+web.Name = "Cobweb"
+web.AnchorPoint = Vector2.new(0, 1)
+web.Position = UDim2.new(0, 2, 1, -2)
+web.Size = UDim2.new(0, 34, 0, 34)
+web.BackgroundTransparency = 1
+web.Text = "🕸️"
+web.TextSize = 26
+web.TextTransparency = 0.55
+web.Active = false
+web.ZIndex = 4
+web.Parent = win
+
+----------------------------------------------------------------
+-- Drag / resize / minimize
+----------------------------------------------------------------
+local function makeDraggable(frame, handle)
+	local dragging, startPos, startInput
+	handle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			startPos = frame.Position
+			startInput = input.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if not dragging then return end
+		if input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch then
+			local delta = input.Position - startInput
+			frame.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+end
+makeDraggable(win, header)
+
+local collapsed = false
+local expandedH = WIN_H
+
+local grip = Instance.new("TextButton")
+grip.Name = "Grip"
+grip.AnchorPoint = Vector2.new(1, 1)
+grip.Position = UDim2.new(1, -4, 1, -4)
+grip.Size = UDim2.new(0, 16, 0, 16)
+grip.BackgroundColor3 = C.card
+grip.BackgroundTransparency = 0.25
+grip.Text = "◢"
+grip.TextColor3 = C.accent
+grip.TextSize = 10
+grip.Font = Enum.Font.GothamBold
+grip.AutoButtonColor = false
+grip.ZIndex = 5
+grip.Parent = win
+corner(grip, 5)
+stroke(grip, C.accent, 1, 0.6)
+addPop(grip, 0.85)
+
+local MIN_W, MIN_H = 236, 190
+local MAX_W, MAX_H = 460, 520
+local resizing = false
+
+grip.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+		resizing = true
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if not resizing or collapsed then return end
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch then
+		local newW = math.clamp(input.Position.X - win.AbsolutePosition.X, MIN_W, MAX_W)
+		local newH = math.clamp(input.Position.Y - win.AbsolutePosition.Y, MIN_H, MAX_H)
+		expandedH = newH
+		win.Size = UDim2.new(0, newW, 0, newH)
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+		resizing = false
+	end
+end)
+
+local HEADER_H = 52
+local barTween = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+minBtn.MouseButton1Click:Connect(function()
+	collapsed = not collapsed
+	grip.Visible = not collapsed
+	web.Visible = not collapsed
+	minBtn.Text = collapsed and "+" or "–"
+	local targetH = collapsed and HEADER_H or expandedH
+	TweenService:Create(win, barTween, {
+		Size = UDim2.new(0, win.Size.X.Offset, 0, targetH),
+	}):Play()
+end)
+
+local popIn = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+win.Size = UDim2.new(0, WIN_W, 0, 0)
+TweenService:Create(win, popIn, { Size = UDim2.new(0, WIN_W, 0, WIN_H) }):Play()
+
+----------------------------------------------------------------
+-- Logic
+----------------------------------------------------------------
+LocalPlayer.Idled:Connect(function()
+	if cfg.antiAFK then
+		VirtualUser:CaptureController()
+		VirtualUser:ClickButton2(Vector2.new())
+	end
+end)
+
+local function character()
+	return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+local function root()
+	return character():WaitForChild("HumanoidRootPart")
+end
+
+-- coin counter from the game's remote (if it exists)
+do
+	local gp = ReplicatedStorage:FindFirstChild("Remotes")
+	gp = gp and gp:FindFirstChild("Gameplay")
+	local coinEv = gp and gp:FindFirstChild("CoinCollected")
+	if coinEv then
+		coinEv.OnClientEvent:Connect(function(_, current)
+			if typeof(current) == "number" then
+				stats.coins = current
+			else
+				stats.coins += 1
+			end
+			coinStat.Text = tostring(stats.coins)
+		end)
+	end
+end
+
+-- coins that got stuck get skipped for a few seconds so the loop never hangs
+local skipped = {}
+
+local function nearestCoin()
+	local hrp = root()
+	local now = os.clock()
+	local best, bestDist = nil, math.huge
+	for _, m in ipairs(workspace:GetChildren()) do
+		local container = m:FindFirstChild("CoinContainer")
+		if container then
+			for _, coin in ipairs(container:GetChildren()) do
+				if coin:IsA("BasePart")
+					and coin:FindFirstChild("TouchInterest")
+					and not (skipped[coin] and skipped[coin] > now) then
+					local d = (hrp.Position - coin.Position).Magnitude
+					if d < bestDist then
+						best, bestDist = coin, d
+					end
+				end
+			end
+		end
+	end
+	return best, bestDist
+end
+
+task.spawn(function()
+	while gui.Parent do
+		if cfg.autoFarm then
+			pcall(function()
+				local hum = character():FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+
+				local coin, dist = nearestCoin()
+				if not coin then return end
+
+				local hrp = root()
+				local duration = math.max(dist / math.max(cfg.farmSpeed, 1), 0.05)
+				local t = TweenService:Create(
+					hrp,
+					TweenInfo.new(duration, Enum.EasingStyle.Linear),
+					{ CFrame = coin.CFrame }
+				)
+				t:Play()
+
+				local began = os.clock()
+				local gotIt = false
+				repeat
+					task.wait()
+					gotIt = (not coin.Parent) or (not coin:FindFirstChild("TouchInterest"))
+				until gotIt or not cfg.autoFarm or (os.clock() - began) > duration + 1.5
+				t:Cancel()
+
+				if not gotIt and cfg.autoFarm then
+					skipped[coin] = os.clock() + 3
+				end
+			end)
+		end
+		task.wait(cfg.loopDelay)
+	end
+end)
+
+task.spawn(function()
+	while gui.Parent do
+		local secs = math.floor(os.clock() - stats.started)
+		timeStat.Text = string.format("%dm %ds", math.floor(secs / 60), secs % 60)
+		task.wait(1)
+	end
+end)
